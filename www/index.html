@@ -24,8 +24,8 @@ button.main{background:var(--accent);color:#2a1a0c;border:0;font-weight:600}butt
 header,footer{position:relative;z-index:5;display:flex;align-items:center;gap:10px;padding:8px 14px;transition:opacity .5s}
 header h1{font-size:1rem;margin:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:400;letter-spacing:.04em;opacity:.9}
 body.idle header,body.idle footer,body.idle .arrow{opacity:0;pointer-events:none}
-#stage{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;touch-action:pan-y}
-#book{position:relative;perspective:2800px;transition:transform .7s ease;display:none;filter:drop-shadow(0 22px 22px rgba(0,0,0,.4))}
+#stage{flex:1;min-height:0;display:flex;position:relative;overflow:hidden;touch-action:pan-y}#stage.zoomed{overflow:auto}
+#book{position:relative;margin:auto;flex:none;perspective:2800px;transition:transform .7s ease;display:none;filter:drop-shadow(0 22px 22px rgba(0,0,0,.4))}
 .page,.leaf{position:absolute;top:0;height:100%}
 .page{width:50%}.page.left{left:0}.page.right{left:50%}
 .leaf{left:50%;width:50%;transform-origin:left center;transform-style:preserve-3d;display:none}
@@ -42,7 +42,7 @@ body[data-mode="night"] img{filter:contrast(1.7) brightness(.95) invert(.9) hue-
 .page.left.has{border-radius:5px 0 0 5px;box-shadow:-1px 0 0 #e4dbc6,-2px 0 0 #bfb59d,-3px 0 0 #e4dbc6,-4px 0 0 #a89e86}
 #book.single .page.left{display:none}
 #book.single .page.right,#book.single .leaf{left:0;width:100%}
-.arrow{position:absolute;top:50%;transform:translateY(-50%);z-index:4;width:48px;height:48px;padding:0;font-size:1.8rem;line-height:1;background:var(--glass);backdrop-filter:blur(6px);transition:opacity .5s,background .2s}
+.arrow{position:fixed;top:50%;transform:translateY(-50%);z-index:4;width:48px;height:48px;padding:0;font-size:1.8rem;line-height:1;background:var(--glass);backdrop-filter:blur(6px);transition:opacity .5s,background .2s}
 .arrow.l{left:12px}.arrow.r{right:12px}
 @media (max-width:760px){.arrow{display:none}}
 footer{flex-direction:column;gap:6px;padding-bottom:12px}
@@ -52,7 +52,7 @@ footer{flex-direction:column;gap:6px;padding-bottom:12px}
  background:linear-gradient(to right,var(--accent) var(--p,0%),rgba(255,255,255,.2) var(--p,0%))}
 #slider::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--accent);border:2px solid #2a1a0c}
 #slider::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:var(--accent);border:2px solid #2a1a0c}
-#welcome{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:20px;z-index:3}
+#welcome{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:20px;z-index:8;overflow:auto}body.hasdoc #welcome{background:rgba(8,5,3,.72)}
 .drop{max-width:440px;width:100%;text-align:center;border:1.5px dashed rgba(232,176,98,.6);border-radius:22px;padding:40px 26px;background:var(--glass);backdrop-filter:blur(8px);box-shadow:0 20px 50px rgba(0,0,0,.4);transition:background .2s,transform .2s}
 .drop.over{background:rgba(232,176,98,.22);transform:scale(1.02)}
 .drop .ico{font-size:3.4rem}
@@ -61,11 +61,26 @@ footer{flex-direction:column;gap:6px;padding-bottom:12px}
 .hint{margin-top:16px;font-size:.8rem;color:var(--muted);opacity:.8}
 #msg{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);background:var(--glass);padding:7px 16px;border-radius:20px;font-size:.85rem;display:none;z-index:6}
 #fsBtn{display:none}
+#toc{position:fixed;top:0;right:0;bottom:0;width:min(320px,85vw);z-index:9;background:rgba(24,15,9,.96);backdrop-filter:blur(8px);transform:translateX(105%);transition:transform .3s;display:flex;flex-direction:column;border-left:1px solid rgba(255,255,255,.12)}
+#toc.open{transform:none}
+#toc .th{display:flex;justify-content:space-between;align-items:center;padding:14px}
+#tocList{overflow:auto;padding:0 8px 24px}
+#tocList a{display:flex;justify-content:space-between;gap:10px;padding:9px 10px;border-radius:8px;cursor:pointer;font-size:.92rem}
+#tocList a:hover{background:rgba(255,255,255,.1)}
+#tocList a span{color:var(--muted);flex:none}
+.rec{display:flex;justify-content:space-between;gap:10px;text-align:left;width:100%;margin-top:8px;border-radius:12px;padding:10px 14px}
+.rec b{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.rec small{color:var(--muted);flex:none}
+#recent h3{font-weight:400;font-size:.85rem;color:var(--muted);margin:22px 0 0;text-align:left}
+header h1{min-width:0}
+@media (max-width:760px){header h1{display:none}header{justify-content:center;flex-wrap:wrap;gap:6px}header button{padding:6px 11px}}
 </style>
 </head>
 <body data-mode="light">
 <header>
  <h1 id="title">Pembaca Buku PDF</h1>
+ <button id="tocBtn" title="Daftar isi">☰ Isi</button>
+ <button id="recBtn" title="Berkas terakhir">🕘</button>
+ <button id="zo" title="Perkecil">−</button><button id="zv" title="Reset zoom">100%</button><button id="zi" title="Perbesar">+</button>
  <button id="modeBtn" title="Ganti tema kertas">☀ Terang</button>
  <button id="fsBtn" title="Layar penuh">⛶</button>
  <button id="openBtn" class="main">Buka PDF</button>
@@ -78,6 +93,8 @@ footer{flex-direction:column;gap:6px;padding-bottom:12px}
   <p>Seret berkas PDF ke sini atau pilih dari perangkat. Berkas dibuka langsung di browser dan tidak diunggah ke mana pun.</p>
   <button id="pick" class="main">Pilih berkas PDF</button>
   <div class="hint">Navigasi: klik halaman, geser, atau tombol panah ← →</div>
+  <div id="recent"></div>
+  <button id="closeW" style="display:none;margin-top:16px">Tutup</button>
  </div></div>
  <div id="book">
   <div class="page left" id="pl"></div>
@@ -96,11 +113,12 @@ footer{flex-direction:column;gap:6px;padding-bottom:12px}
  </div>
  <div class="bar" style="justify-content:center"><span id="info">–</span><input id="jump" type="number" min="1" placeholder="Ke hal…" aria-label="Lompat ke halaman" style="width:6em;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);color:var(--ink);border-radius:999px;padding:5px;text-align:center;font:inherit"></div>
 </footer>
+<aside id="toc"><div class="th"><b>Daftar isi</b><button id="tocX">×</button></div><div id="tocList"></div></aside>
 <script src="pdf.min.js"></script>
 <script>
 const $=id=>document.getElementById(id);
 pdfjsLib.GlobalWorkerOptions.workerSrc='pdf.worker.min.js';
-let doc=null,n=0,ratio=.707,pw=0,ph=0,single=false,cur=0,busy=false,cache=new Map();
+let z=1,curKey='',doc=null,n=0,ratio=.707,pw=0,ph=0,single=false,cur=0,busy=false,cache=new Map();
 const book=$('book'),pl=$('pl'),pr=$('pr'),leaf=$('leaf'),lf=$('lf'),lb=$('lb');
 
 function msg(t,ms=0){const m=$('msg');m.textContent=t;m.style.display=t?'block':'none';if(ms)setTimeout(()=>m.style.display='none',ms)}
@@ -115,7 +133,7 @@ async function img(i){
     const page=await doc.getPage(i+1);
     const v0=page.getViewport({scale:1});
     const dpr=Math.min(Math.max(window.devicePixelRatio||1,1.75),3);
-    const s=pw*dpr/v0.width;
+    const s=Math.min(pw*dpr,3200)/v0.width;
     const v=page.getViewport({scale:s});
     const c=document.createElement('canvas');c.width=v.width;c.height=v.height;
     await page.render({canvasContext:c.getContext('2d'),viewport:v}).promise;
@@ -137,7 +155,7 @@ function shift(k){
 function label(k){
   const[l,r]=sp(k);const a=[l,r].filter(ok).map(x=>x+1);
   $('info').textContent=`Halaman ${a.join('–')} dari ${n}`;
-  $('prev').disabled=k<=0;$('next').disabled=k>=K()-1;
+  $('prev').disabled=k<=0;$('next').disabled=k>=K()-1;savePos(Math.max(...a,1));
   const sl=$('slider');sl.max=n;sl.value=Math.max(...a,1);sl.style.setProperty('--p',n>1?((Math.max(...a,1)-1)/(n-1)*100)+'%':'100%');
 }
 async function render(k){
@@ -177,7 +195,7 @@ function layout(){
   const aw=st.clientWidth-8,ah=st.clientHeight-8;
   single=aw<760;
   const cols=single?1:2;
-  ph=Math.min(ah,aw/(cols*ratio),2400);pw=ph*ratio;
+  ph=Math.min(ah,aw/(cols*ratio),2400)*z;pw=ph*ratio;$('stage').classList.toggle('zoomed',z>1);
   book.style.width=cols*pw+'px';book.style.height=ph+'px';
   book.classList.toggle('single',single);
 }
@@ -188,13 +206,44 @@ async function openFile(f){
   try{
     const data=new Uint8Array(await f.arrayBuffer());
     doc=await pdfjsLib.getDocument({data}).promise;
-    n=doc.numPages;cache.clear();
+    n=doc.numPages;cache.clear();curKey='';const key=f.name+'|'+f.size,saved=posMap()[key]||1;
     const p1=await doc.getPage(1);const v=p1.getViewport({scale:1});ratio=v.width/v.height;
     $('title').textContent=f.name.replace(/\.pdf$/i,'');
-    $('welcome').style.display='none';book.style.display='block';
+    showWelcome(false);document.body.classList.add('hasdoc');book.style.display='block';z=1;$('zv').textContent='100%';
     $('jump').max=n;
-    layout();await render(0);msg('');wake();
+    layout();curKey=key;await render(pageToK(Math.min(n,saved)-1));msg('');if(saved>1)msg('Dilanjutkan dari halaman '+Math.min(n,saved),2500);wake();loadToc();saveRecent(f,key,n);
   }catch(e){console.error(e);msg('Gagal membuka PDF (berkas rusak atau dilindungi sandi)',4000)}
+}
+const pageToK=p0=>single?p0:(p0===0?0:Math.floor((p0+1)/2));
+function posMap(){try{return JSON.parse(localStorage.getItem('bukuPos')||'{}')}catch(e){return{}}}
+function savePos(p){if(!curKey)return;const m=posMap();m[curKey]=p;try{localStorage.setItem('bukuPos',JSON.stringify(m))}catch(e){}}
+async function setZoom(v){v=Math.max(1,Math.min(3,Math.round(v*4)/4));if(v===z||!doc||busy)return;z=v;$('zv').textContent=Math.round(z*100)+'%';layout();cache.clear();await render(cur)}
+const idb=()=>new Promise((res,rej)=>{const r=indexedDB.open('bukuDB',1);r.onupgradeneeded=()=>r.result.createObjectStore('files',{keyPath:'key'});r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)});
+async function recents(){try{const d=await idb();return await new Promise(res=>{const q=d.transaction('files').objectStore('files').getAll();q.onsuccess=()=>res(q.result.sort((a,b)=>b.t-a.t));q.onerror=()=>res([])})}catch(e){return[]}}
+async function saveRecent(f,key,pages){try{if(f.size>120e6)return;const d=await idb();const tx=d.transaction('files','readwrite'),os=tx.objectStore('files');os.put({key,name:f.name,size:f.size,n:pages,t:Date.now(),file:f});await new Promise(r=>tx.oncomplete=r);const all=await recents();if(all.length>5){const t2=d.transaction('files','readwrite');all.slice(5).forEach(x=>t2.objectStore('files').delete(x.key))}}catch(e){}}
+async function renderRecent(){
+  const box=$('recent');box.innerHTML='';const all=await recents();if(!all.length)return;
+  const h=document.createElement('h3');h.textContent='Terakhir dibaca';box.appendChild(h);
+  const m=posMap();
+  all.forEach(x=>{const b=document.createElement('button');b.className='rec';
+    const t=document.createElement('b');t.textContent=x.name.replace(/\.pdf$/i,'');
+    const g=document.createElement('small');g.textContent='hal '+(m[x.key]||1)+(x.n?' / '+x.n:'');
+    b.append(t,g);b.onclick=()=>openFile(x.file);box.appendChild(b)})
+}
+function showWelcome(v){$('welcome').style.display=v?'flex':'none';$('closeW').style.display=doc?'inline-block':'none';if(v)renderRecent()}
+function closeToc(){$('toc').classList.remove('open')}
+async function loadToc(){
+  const L=$('tocList');L.innerHTML='';const my=doc;let ol=null;
+  try{ol=await my.getOutline()}catch(e){}
+  if(!ol||!ol.length){L.innerHTML='<p style="padding:10px;color:var(--muted)">PDF ini tidak punya daftar isi.</p>';return}
+  async function walk(items,d){for(const it of items){
+    const a=document.createElement('a');a.style.paddingLeft=(10+d*16)+'px';
+    const t=document.createElement('div');t.textContent=it.title;const g=document.createElement('span');a.append(t,g);L.appendChild(a);
+    (async()=>{try{let dest=it.dest;if(typeof dest==='string')dest=await my.getDestination(dest);
+      const idx=typeof dest[0]==='object'?await my.getPageIndex(dest[0]):dest[0];
+      a.onclick=()=>{jumpTo(idx+1);closeToc()};g.textContent=idx+1}catch(e){}})();
+    if(it.items&&it.items.length)await walk(it.items,d+1)}}
+  await walk(ol,0)
 }
 function jumpTo(p){
   if(!doc||isNaN(p))return;
@@ -214,6 +263,10 @@ $('slider').oninput=e=>{const v=+e.target.value;e.target.style.setProperty('--p'
 const modes=[['light','☀ Terang'],['sepia','☕ Sepia'],['night','☾ Malam']];let mi=0;
 function setMode(i){mi=i;document.body.dataset.mode=modes[i][0];$('modeBtn').textContent=modes[i][1];try{localStorage.setItem('bukuMode',i)}catch(e){}}
 try{const m=parseInt(localStorage.getItem('bukuMode'));if(m>=0&&m<3)setMode(m)}catch(e){}
+$('tocBtn').onclick=()=>$('toc').classList.toggle('open');$('tocX').onclick=closeToc;
+$('recBtn').onclick=()=>showWelcome(true);$('closeW').onclick=()=>showWelcome(false);
+$('zo').onclick=()=>setZoom(z-.5);$('zi').onclick=()=>setZoom(z+.5);$('zv').onclick=()=>setZoom(1);
+renderRecent();
 $('modeBtn').onclick=()=>setMode((mi+1)%3);
 let it;function wake(){document.body.classList.remove('idle');clearTimeout(it);if(doc)it=setTimeout(()=>document.body.classList.add('idle'),3500)}
 ['pointermove','pointerdown','keydown','touchstart'].forEach(t=>addEventListener(t,wake,{passive:true}));
@@ -229,7 +282,7 @@ let sx=null,moved=false;
 const st=$('stage');
 st.addEventListener('pointerdown',e=>{sx=e.clientX;moved=false});
 st.addEventListener('pointerup',e=>{
-  if(sx==null||!doc)return;
+  if(sx==null||!doc||z>1)return;
   const dx=e.clientX-sx;sx=null;
   if(Math.abs(dx)>50){flip(dx<0?1:-1);return}
   if(e.target.closest('#book')){
