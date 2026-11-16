@@ -24,7 +24,7 @@ button.main{background:var(--accent);color:#2a1a0c;border:0;font-weight:600}butt
 header,footer{position:relative;z-index:5;display:flex;align-items:center;gap:10px;padding:8px 14px;transition:opacity .5s}
 header h1{font-size:1rem;margin:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:400;letter-spacing:.04em;opacity:.9}
 body.idle header,body.idle footer,body.idle .arrow{opacity:0;pointer-events:none}
-#stage{flex:1;min-height:0;display:flex;position:relative;overflow:hidden;touch-action:pan-y}#stage.zoomed{overflow:auto}
+#stage{flex:1;min-height:0;display:flex;position:relative;overflow:hidden;touch-action:pan-y}#stage.zoomed{overflow:auto;touch-action:pan-x pan-y}
 #book{position:relative;margin:auto;flex:none;perspective:2800px;transition:transform .7s ease;display:none;filter:drop-shadow(0 22px 22px rgba(0,0,0,.4))}
 .page,.leaf{position:absolute;top:0;height:100%}
 .page{width:50%}.page.left{left:0}.page.right{left:50%}
@@ -72,14 +72,16 @@ footer{flex-direction:column;gap:6px;padding-bottom:12px}
 .rec b{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.rec small{color:var(--muted);flex:none}
 #recent h3{font-weight:400;font-size:.85rem;color:var(--muted);margin:22px 0 0;text-align:left}
 header h1{min-width:0}
+body:not(.hasdoc) #homeBtn,body:not(.hasdoc) #tocBtn,body:not(.hasdoc) #recBtn,body:not(.hasdoc) #zo,body:not(.hasdoc) #zv,body:not(.hasdoc) #zi{display:none}
 @media (max-width:760px){header h1{display:none}header{justify-content:center;flex-wrap:wrap;gap:6px}header button{padding:6px 11px}}
 </style>
 </head>
 <body data-mode="light">
 <header>
  <h1 id="title">Pembaca Buku PDF</h1>
+ <button id="homeBtn" title="Kembali ke beranda">🏠 Beranda</button>
  <button id="tocBtn" title="Daftar isi">☰ Isi</button>
- <button id="recBtn" title="Berkas terakhir">🕘</button>
+ <button id="recBtn" title="Berkas terakhir">🕘 Riwayat</button>
  <button id="zo" title="Perkecil">−</button><button id="zv" title="Reset zoom">100%</button><button id="zi" title="Perbesar">+</button>
  <button id="modeBtn" title="Ganti tema kertas">☀ Terang</button>
  <button id="fsBtn" title="Layar penuh">⛶</button>
@@ -148,7 +150,7 @@ async function fill(el,i,isFace){
   const src=await img(i);const im=new Image();im.src=src;im.draggable=false;el.appendChild(im);
 }
 function shift(k){
-  if(single){book.style.transform='';return}
+  if(single||z>1){book.style.transform='';return}
   const[l,r]=sp(k);
   book.style.transform=!ok(l)?`translateX(${-pw/2}px)`:!ok(r)?`translateX(${pw/2}px)`:'';
 }
@@ -209,7 +211,7 @@ async function openFile(f){
     n=doc.numPages;cache.clear();curKey='';const key=f.name+'|'+f.size,saved=posMap()[key]||1;
     const p1=await doc.getPage(1);const v=p1.getViewport({scale:1});ratio=v.width/v.height;
     $('title').textContent=f.name.replace(/\.pdf$/i,'');
-    showWelcome(false);document.body.classList.add('hasdoc');book.style.display='block';z=1;$('zv').textContent='100%';
+    showWelcome(false);document.body.classList.add('hasdoc');if(!histOn){try{history.pushState({b:1},'');histOn=true}catch(e){}}book.style.display='block';z=1;$('zv').textContent='100%';
     $('jump').max=n;
     layout();curKey=key;await render(pageToK(Math.min(n,saved)-1));msg('');if(saved>1)msg('Dilanjutkan dari halaman '+Math.min(n,saved),2500);wake();loadToc();saveRecent(f,key,n);
   }catch(e){console.error(e);msg('Gagal membuka PDF (berkas rusak atau dilindungi sandi)',4000)}
@@ -220,7 +222,12 @@ function savePos(p){if(!curKey)return;const m=posMap();m[curKey]=p;try{localStor
 async function setZoom(v){v=Math.max(1,Math.min(3,Math.round(v*4)/4));if(v===z||!doc||busy)return;z=v;$('zv').textContent=Math.round(z*100)+'%';layout();cache.clear();await render(cur)}
 const idb=()=>new Promise((res,rej)=>{const r=indexedDB.open('bukuDB',1);r.onupgradeneeded=()=>r.result.createObjectStore('files',{keyPath:'key'});r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)});
 async function recents(){try{const d=await idb();return await new Promise(res=>{const q=d.transaction('files').objectStore('files').getAll();q.onsuccess=()=>res(q.result.sort((a,b)=>b.t-a.t));q.onerror=()=>res([])})}catch(e){return[]}}
-async function saveRecent(f,key,pages){try{if(f.size>120e6)return;const d=await idb();const tx=d.transaction('files','readwrite'),os=tx.objectStore('files');os.put({key,name:f.name,size:f.size,n:pages,t:Date.now(),file:f});await new Promise(r=>tx.oncomplete=r);const all=await recents();if(all.length>5){const t2=d.transaction('files','readwrite');all.slice(5).forEach(x=>t2.objectStore('files').delete(x.key))}}catch(e){}}
+async function saveRecent(f,key,pages){try{if(f.size>120e6)return;const blob=new Blob([await f.arrayBuffer()],{type:'application/pdf'});const d=await idb();const tx=d.transaction('files','readwrite'),os=tx.objectStore('files');os.put({key,name:f.name,size:f.size,n:pages,t:Date.now(),file:blob});await new Promise(r=>tx.oncomplete=r);const all=await recents();if(all.length>5){const t2=d.transaction('files','readwrite');all.slice(5).forEach(x=>t2.objectStore('files').delete(x.key))}}catch(e){}}
+async function delRecent(key){
+  try{const d=await idb();const tx=d.transaction('files','readwrite');const os=tx.objectStore('files');key?os.delete(key):os.clear();await new Promise(r=>tx.oncomplete=r)}catch(e){}
+  const m=posMap();if(key)delete m[key];else Object.keys(m).forEach(k=>delete m[k]);
+  try{localStorage.setItem('bukuPos',JSON.stringify(m))}catch(e){}
+}
 async function renderRecent(){
   const box=$('recent');box.innerHTML='';const all=await recents();if(!all.length)return;
   const h=document.createElement('h3');h.textContent='Terakhir dibaca';box.appendChild(h);
@@ -228,9 +235,31 @@ async function renderRecent(){
   all.forEach(x=>{const b=document.createElement('button');b.className='rec';
     const t=document.createElement('b');t.textContent=x.name.replace(/\.pdf$/i,'');
     const g=document.createElement('small');g.textContent='hal '+(m[x.key]||1)+(x.n?' / '+x.n:'');
-    b.append(t,g);b.onclick=()=>openFile(x.file);box.appendChild(b)})
+    b.append(t,g);b.onclick=()=>openFile(new File([x.file],x.name,{type:'application/pdf'}));
+    const del=document.createElement('button');del.textContent='✕';del.title='Hapus dari riwayat';del.setAttribute('aria-label','Hapus dari riwayat');
+    del.style.cssText='margin-top:8px;border-radius:12px;padding:10px 14px;flex:none';
+    del.onclick=async()=>{await delRecent(x.key);renderRecent()};
+    b.style.flex='1';b.style.minWidth='0';
+    const row=document.createElement('div');row.style.cssText='display:flex;gap:6px';row.append(b,del);box.appendChild(row)});
+  const ca=document.createElement('button');ca.textContent='Hapus semua riwayat';
+  ca.style.cssText='margin-top:14px;background:none;border:0;color:var(--muted);text-decoration:underline;padding:6px';
+  ca.onclick=async()=>{await delRecent();renderRecent()};box.appendChild(ca)
 }
 function showWelcome(v){$('welcome').style.display=v?'flex':'none';$('closeW').style.display=doc?'inline-block':'none';if(v)renderRecent()}
+let histOn=false;
+function goHome(){
+  if(!doc)return;
+  doc=null;n=0;curKey='';cache.clear();z=1;$('zv').textContent='100%';clearTimeout(it);
+  book.style.display='none';$('stage').classList.remove('zoomed');closeToc();
+  document.body.classList.remove('hasdoc','idle');$('title').textContent='Pembaca Buku PDF';
+  $('info').textContent='–';$('prev').disabled=true;$('next').disabled=true;
+  pl.innerHTML='';pr.innerHTML='';$('tocList').innerHTML='';
+  showWelcome(true);
+}
+function backHome(){
+  if(histOn){try{history.back()}catch(e){}setTimeout(()=>{if(doc)goHome()},350)}else goHome();
+}
+addEventListener('popstate',()=>{histOn=false;goHome()});
 function closeToc(){$('toc').classList.remove('open')}
 async function loadToc(){
   const L=$('tocList');L.innerHTML='';const my=doc;let ol=null;
@@ -263,6 +292,7 @@ $('slider').oninput=e=>{const v=+e.target.value;e.target.style.setProperty('--p'
 const modes=[['light','☀ Terang'],['sepia','☕ Sepia'],['night','☾ Malam']];let mi=0;
 function setMode(i){mi=i;document.body.dataset.mode=modes[i][0];$('modeBtn').textContent=modes[i][1];try{localStorage.setItem('bukuMode',i)}catch(e){}}
 try{const m=parseInt(localStorage.getItem('bukuMode'));if(m>=0&&m<3)setMode(m)}catch(e){}
+$('homeBtn').onclick=backHome;
 $('tocBtn').onclick=()=>$('toc').classList.toggle('open');$('tocX').onclick=closeToc;
 $('recBtn').onclick=()=>showWelcome(true);$('closeW').onclick=()=>showWelcome(false);
 $('zo').onclick=()=>setZoom(z-.5);$('zi').onclick=()=>setZoom(z+.5);$('zv').onclick=()=>setZoom(1);
