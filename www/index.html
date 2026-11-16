@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pembaca Buku PDF</title>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+ --ink:#f4eadb;--muted:#c4ae93;--accent:#e8b062;--paper:#fbf6ea;--glass:rgba(24,15,9,.55);--lamp:rgba(255,200,120,.22);color-scheme:dark}
+body[data-mode="sepia"]{--paper:#f1e4c6}
+body[data-mode="night"]{--paper:#16181d;--lamp:rgba(120,150,255,.08)}
+*,*::before,*::after{box-sizing:inherit}
+html,body{height:100%;margin:0}
+body{font-family:Lora,Georgia,"Times New Roman",serif;color:var(--ink);display:flex;flex-direction:column;overflow:hidden;
+ background:radial-gradient(ellipse 70% 55% at 50% 38%,var(--lamp),transparent 70%),
+ repeating-linear-gradient(92deg,rgba(0,0,0,.07) 0 2px,transparent 2px 9px,rgba(255,255,255,.025) 9px 10px,transparent 10px 23px),
+ linear-gradient(#4a3322,#2a1b11);transition:background .4s}
+body::after{content:"";position:fixed;inset:0;pointer-events:none;background:radial-gradient(ellipse at center,transparent 55%,rgba(0,0,0,.55))}
+body[data-mode="night"]{background:radial-gradient(ellipse 70% 55% at 50% 38%,var(--lamp),transparent 70%),linear-gradient(#14110f,#0a0807)}
+button{font:inherit;color:var(--ink);background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.16);border-radius:999px;padding:7px 16px;cursor:pointer;transition:background .2s,transform .15s}
+button:hover:not(:disabled){background:rgba(255,255,255,.2)}button:active:not(:disabled){transform:scale(.95)}
+button:disabled{opacity:.3;cursor:default}
+button.main{background:var(--accent);color:#2a1a0c;border:0;font-weight:600}button.main:hover{background:#f2c27f!important}
+header,footer{position:relative;z-index:5;display:flex;align-items:center;gap:10px;padding:8px 14px;transition:opacity .5s}
+header h1{font-size:1rem;margin:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:400;letter-spacing:.04em;opacity:.9}
+body.idle header,body.idle footer,body.idle .arrow{opacity:0;pointer-events:none}
+#stage{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;touch-action:pan-y}
+#book{position:relative;perspective:2800px;transition:transform .7s ease;display:none;filter:drop-shadow(0 22px 22px rgba(0,0,0,.4))}
+.page,.leaf{position:absolute;top:0;height:100%}
+.page{width:50%}.page.left{left:0}.page.right{left:50%}
+.leaf{left:50%;width:50%;transform-origin:left center;transform-style:preserve-3d;display:none}
+.face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;overflow:hidden;background:var(--paper)}
+.face.back{transform:rotateY(180deg)}
+.page.has{background:var(--paper)}
+.face img,.page img{width:100%;height:100%;display:block;user-select:none;-webkit-user-drag:none;transition:filter .3s}
+body[data-mode="sepia"] img{filter:sepia(.5) brightness(.96) contrast(.95)}
+body[data-mode="night"] img{filter:contrast(1.7) brightness(.95) invert(.9) hue-rotate(180deg) brightness(1.12)}
+.face::after,.page.has::after{content:"";position:absolute;inset:0;pointer-events:none}
+.page.left.has::after,.face.back::after{background:linear-gradient(to left,rgba(0,0,0,.13),rgba(0,0,0,.03) 4%,transparent 9%)}
+.page.right.has::after,.face.front::after{background:linear-gradient(to right,rgba(0,0,0,.13),rgba(0,0,0,.03) 4%,transparent 9%)}
+.page.right.has{border-radius:0 5px 5px 0;box-shadow:1px 0 0 #e4dbc6,2px 0 0 #bfb59d,3px 0 0 #e4dbc6,4px 0 0 #a89e86}
+.page.left.has{border-radius:5px 0 0 5px;box-shadow:-1px 0 0 #e4dbc6,-2px 0 0 #bfb59d,-3px 0 0 #e4dbc6,-4px 0 0 #a89e86}
+#book.single .page.left{display:none}
+#book.single .page.right,#book.single .leaf{left:0;width:100%}
+.arrow{position:absolute;top:50%;transform:translateY(-50%);z-index:4;width:48px;height:48px;padding:0;font-size:1.8rem;line-height:1;background:var(--glass);backdrop-filter:blur(6px);transition:opacity .5s,background .2s}
+.arrow.l{left:12px}.arrow.r{right:12px}
+@media (max-width:760px){.arrow{display:none}}
+footer{flex-direction:column;gap:6px;padding-bottom:12px}
+.bar{display:flex;align-items:center;gap:12px;width:min(640px,92vw);color:var(--muted);font-size:.88rem}
+#info{white-space:nowrap;min-width:9.5em;text-align:center}
+#slider{flex:1;-webkit-appearance:none;appearance:none;height:5px;border-radius:5px;outline:none;cursor:pointer;
+ background:linear-gradient(to right,var(--accent) var(--p,0%),rgba(255,255,255,.2) var(--p,0%))}
+#slider::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--accent);border:2px solid #2a1a0c}
+#slider::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:var(--accent);border:2px solid #2a1a0c}
+#welcome{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:20px;z-index:3}
+.drop{max-width:440px;width:100%;text-align:center;border:1.5px dashed rgba(232,176,98,.6);border-radius:22px;padding:40px 26px;background:var(--glass);backdrop-filter:blur(8px);box-shadow:0 20px 50px rgba(0,0,0,.4);transition:background .2s,transform .2s}
+.drop.over{background:rgba(232,176,98,.22);transform:scale(1.02)}
+.drop .ico{font-size:3.4rem}
+.drop h2{font-weight:600;font-size:1.5rem;margin:8px 0 0}
+.drop p{color:var(--muted);margin:10px 0 22px;line-height:1.6;font-size:.95rem}
+.hint{margin-top:16px;font-size:.8rem;color:var(--muted);opacity:.8}
+#msg{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);background:var(--glass);padding:7px 16px;border-radius:20px;font-size:.85rem;display:none;z-index:6}
+#fsBtn{display:none}
+</style>
+</head>
+<body data-mode="light">
+<header>
+ <h1 id="title">Pembaca Buku PDF</h1>
+ <button id="modeBtn" title="Ganti tema kertas">☀ Terang</button>
+ <button id="fsBtn" title="Layar penuh">⛶</button>
+ <button id="openBtn" class="main">Buka PDF</button>
+ <input type="file" id="file" accept="application/pdf" hidden>
+</header>
+<main id="stage">
+ <div id="welcome"><div class="drop" id="drop">
+  <div class="ico">📖</div>
+  <h2 style="font-weight:normal;margin:8px 0 0">Baca PDF seperti buku</h2>
+  <p>Seret berkas PDF ke sini atau pilih dari perangkat. Berkas dibuka langsung di browser dan tidak diunggah ke mana pun.</p>
+  <button id="pick" class="main">Pilih berkas PDF</button>
+  <div class="hint">Navigasi: klik halaman, geser, atau tombol panah ← →</div>
+ </div></div>
+ <div id="book">
+  <div class="page left" id="pl"></div>
+  <div class="page right" id="pr"></div>
+  <div class="leaf" id="leaf"><div class="face front" id="lf"></div><div class="face back" id="lb"></div></div>
+ </div>
+ <button class="arrow l" id="al" aria-label="Sebelumnya">‹</button>
+ <button class="arrow r" id="ar" aria-label="Berikutnya">›</button>
+ <div id="msg"></div>
+</main>
+<footer>
+ <div class="bar">
+  <button id="prev" disabled aria-label="Halaman sebelumnya">‹</button>
+  <input type="range" id="slider" min="1" max="1" value="1" aria-label="Geser halaman">
+  <button id="next" disabled aria-label="Halaman berikutnya">›</button>
+ </div>
+ <div class="bar" style="justify-content:center"><span id="info">–</span><input id="jump" type="number" min="1" placeholder="Ke hal…" aria-label="Lompat ke halaman" style="width:6em;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);color:var(--ink);border-radius:999px;padding:5px;text-align:center;font:inherit"></div>
+</footer>
+<script src="pdf.min.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+pdfjsLib.GlobalWorkerOptions.workerSrc='pdf.worker.min.js';
+let doc=null,n=0,ratio=.707,pw=0,ph=0,single=false,cur=0,busy=false,cache=new Map();
+const book=$('book'),pl=$('pl'),pr=$('pr'),leaf=$('leaf'),lf=$('lf'),lb=$('lb');
+
+function msg(t,ms=0){const m=$('msg');m.textContent=t;m.style.display=t?'block':'none';if(ms)setTimeout(()=>m.style.display='none',ms)}
+const K=()=>single?n:Math.floor(n/2)+1;
+function sp(k){if(single)return[null,k];return k===0?[null,0]:[2*k-1,2*k<n?2*k:null]}
+function ok(i){return i!=null&&i<n}
+
+async function img(i){
+  if(!ok(i))return null;
+  if(cache.has(i))return cache.get(i);
+  const p=(async()=>{
+    const page=await doc.getPage(i+1);
+    const v0=page.getViewport({scale:1});
+    const dpr=Math.min(Math.max(window.devicePixelRatio||1,1.75),3);
+    const s=pw*dpr/v0.width;
+    const v=page.getViewport({scale:s});
+    const c=document.createElement('canvas');c.width=v.width;c.height=v.height;
+    await page.render({canvasContext:c.getContext('2d'),viewport:v}).promise;
+    return c.toDataURL('image/jpeg',.9);
+  })();
+  cache.set(i,p);return p;
+}
+async function fill(el,i,isFace){
+  el.innerHTML='';
+  if(!isFace){el.classList.toggle('has',ok(i))}
+  if(!ok(i))return;
+  const src=await img(i);const im=new Image();im.src=src;im.draggable=false;el.appendChild(im);
+}
+function shift(k){
+  if(single){book.style.transform='';return}
+  const[l,r]=sp(k);
+  book.style.transform=!ok(l)?`translateX(${-pw/2}px)`:!ok(r)?`translateX(${pw/2}px)`:'';
+}
+function label(k){
+  const[l,r]=sp(k);const a=[l,r].filter(ok).map(x=>x+1);
+  $('info').textContent=`Halaman ${a.join('–')} dari ${n}`;
+  $('prev').disabled=k<=0;$('next').disabled=k>=K()-1;
+  const sl=$('slider');sl.max=n;sl.value=Math.max(...a,1);sl.style.setProperty('--p',n>1?((Math.max(...a,1)-1)/(n-1)*100)+'%':'100%');
+}
+async function render(k){
+  cur=Math.max(0,Math.min(K()-1,k));
+  const[l,r]=sp(cur);
+  shift(cur);
+  await Promise.all([fill(pl,l),fill(pr,r)]);
+  label(cur);
+}
+async function flip(dir){
+  if(busy||!doc)return;
+  const k1=cur+dir;if(k1<0||k1>=K())return;
+  busy=true;
+  const[l0,r0]=sp(cur),[l1,r1]=sp(k1);
+  await Promise.all([l0,r0,l1,r1].map(img));
+  if(dir>0){
+    await Promise.all([fill(pl,l0),fill(pr,r1),fill(lf,r0,1),fill(lb,l1,1)]);
+  }else{
+    await Promise.all([fill(pl,l1),fill(pr,r0),fill(lf,r1,1),fill(lb,l0,1)]);
+  }
+  lb.style.background=ok(dir>0?l1:l0)?'':'var(--paper)';
+  leaf.style.transition='none';leaf.style.display='block';
+  leaf.style.transform=dir>0?'rotateY(0deg)':'rotateY(-180deg)';
+  void leaf.offsetWidth;
+  leaf.style.transition='transform .9s cubic-bezier(.45,.05,.25,1)';
+  shift(k1);
+  leaf.style.transform=dir>0?'rotateY(-180deg)':'rotateY(0deg)';
+  setTimeout(async()=>{
+    cur=k1;
+    await Promise.all([fill(pl,l1),fill(pr,r1)]);
+    leaf.style.display='none';
+    label(cur);busy=false;
+  },930);
+}
+function layout(){
+  const st=$('stage');
+  const aw=st.clientWidth-8,ah=st.clientHeight-8;
+  single=aw<760;
+  const cols=single?1:2;
+  ph=Math.min(ah,aw/(cols*ratio),2400);pw=ph*ratio;
+  book.style.width=cols*pw+'px';book.style.height=ph+'px';
+  book.classList.toggle('single',single);
+}
+async function openFile(f){
+  if(!f)return;
+  if(f.type!=='application/pdf'&&!/\.pdf$/i.test(f.name)){msg('Berkas harus berformat PDF',2500);return}
+  msg('Membuka buku…');
+  try{
+    const data=new Uint8Array(await f.arrayBuffer());
+    doc=await pdfjsLib.getDocument({data}).promise;
+    n=doc.numPages;cache.clear();
+    const p1=await doc.getPage(1);const v=p1.getViewport({scale:1});ratio=v.width/v.height;
+    $('title').textContent=f.name.replace(/\.pdf$/i,'');
+    $('welcome').style.display='none';book.style.display='block';
+    $('jump').max=n;
+    layout();await render(0);msg('');wake();
+  }catch(e){console.error(e);msg('Gagal membuka PDF (berkas rusak atau dilindungi sandi)',4000)}
+}
+function jumpTo(p){
+  if(!doc||isNaN(p))return;
+  p=Math.max(1,Math.min(n,p))-1;
+  const k=single?p:(p===0?0:Math.ceil(p/2));
+  const kk=single?p:(p===0?0:Math.floor((p+1)/2));
+  const t=kk;
+  if(t===cur)return;
+  if(Math.abs(t-cur)===1)flip(t>cur?1:-1);else render(t);
+}
+$('openBtn').onclick=$('pick').onclick=()=>$('file').click();
+$('file').onchange=e=>openFile(e.target.files[0]);
+$('fsBtn').onclick=()=>{try{document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen()}catch(e){}};
+$('next').onclick=$('ar').onclick=()=>flip(1);$('prev').onclick=$('al').onclick=()=>flip(-1);
+$('slider').onchange=e=>jumpTo(parseInt(e.target.value));
+$('slider').oninput=e=>{const v=+e.target.value;e.target.style.setProperty('--p',(n>1?(v-1)/(n-1)*100:100)+'%');$('info').textContent='Halaman '+v+' dari '+n};
+const modes=[['light','☀ Terang'],['sepia','☕ Sepia'],['night','☾ Malam']];let mi=0;
+function setMode(i){mi=i;document.body.dataset.mode=modes[i][0];$('modeBtn').textContent=modes[i][1];try{localStorage.setItem('bukuMode',i)}catch(e){}}
+try{const m=parseInt(localStorage.getItem('bukuMode'));if(m>=0&&m<3)setMode(m)}catch(e){}
+$('modeBtn').onclick=()=>setMode((mi+1)%3);
+let it;function wake(){document.body.classList.remove('idle');clearTimeout(it);if(doc)it=setTimeout(()=>document.body.classList.add('idle'),3500)}
+['pointermove','pointerdown','keydown','touchstart'].forEach(t=>addEventListener(t,wake,{passive:true}));
+$('jump').addEventListener('keydown',e=>{if(e.key==='Enter'){jumpTo(parseInt(e.target.value));e.target.value='';e.target.blur()}});
+addEventListener('keydown',e=>{
+  if(e.target.tagName==='INPUT')return;
+  if(e.key==='ArrowRight'||e.key==='PageDown'||e.key===' ')flip(1);
+  else if(e.key==='ArrowLeft'||e.key==='PageUp')flip(-1);
+  else if(e.key==='Home'&&doc)render(0);
+  else if(e.key==='End'&&doc)render(K()-1);
+});
+let sx=null,moved=false;
+const st=$('stage');
+st.addEventListener('pointerdown',e=>{sx=e.clientX;moved=false});
+st.addEventListener('pointerup',e=>{
+  if(sx==null||!doc)return;
+  const dx=e.clientX-sx;sx=null;
+  if(Math.abs(dx)>50){flip(dx<0?1:-1);return}
+  if(e.target.closest('#book')){
+    const r=book.getBoundingClientRect();
+    flip(e.clientX<r.left+r.width/2&&!single?-1:(single&&e.clientX<r.left+r.width*.3?-1:1));
+  }
+});
+const drop=$('drop');
+['dragenter','dragover'].forEach(t=>document.addEventListener(t,e=>{e.preventDefault();drop.classList.add('over')}));
+['dragleave','drop'].forEach(t=>document.addEventListener(t,e=>{e.preventDefault();drop.classList.remove('over')}));
+document.addEventListener('drop',e=>openFile(e.dataTransfer.files[0]));
+let rt;addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(async()=>{
+  if(!doc||busy)return;
+  const was=single,[l]=sp(cur);const page=ok(l)?l:sp(cur)[1];
+  layout();cache.clear();
+  const t=single?page:(page===0?0:Math.floor((page+1)/2));
+  await render(t);
+},250)});
+</script>
+</body>
+</html>
