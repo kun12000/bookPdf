@@ -13,3 +13,4 @@ npx cap sync android
 cd android && ./gradlew assembleDebug
 APK: android/app/build/outputs/apk/debug/app-debug.apk
 "# bookPdf" 
+[![Download APK](https://img.shields.io/badge/Download-APK-3DDC84?style=for-the-badge&logo=android&logoColor=white)](https://github.com/USERNAME/REPO/releases/download/latest/buku-pdf.apk)
