@@ -17,4 +17,4 @@ APK: android/app/build/outputs/apk/debug/app-debug.apk
 [![Download APK](https://img.shields.io/badge/Download-APK-3DDC84?style=for-the-badge&logo=android&logoColor=white)](https://github.com/kun12000/bookPdf/releases/download/latest/buku-pdf.apk)
 
 ## Web bookPDF 
-(https://kun12000.github.io/bookPdf/)
+https://kun12000.github.io/bookPdf/
