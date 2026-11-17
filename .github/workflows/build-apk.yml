@@ -3,6 +3,10 @@ on:
   push:
     branches: [main, master]
   workflow_dispatch:
+
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -20,7 +24,18 @@ jobs:
       - run: npx capacitor-assets generate --android
       - run: npx cap sync android
       - run: chmod +x android/gradlew && cd android && ./gradlew assembleDebug
+
       - uses: actions/upload-artifact@v4
         with:
           name: buku-pdf-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Ganti nama APK
+        run: cp android/app/build/outputs/apk/debug/app-debug.apk buku-pdf.apk
+
+      - name: Upload ke Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: Buku PDF (terbaru)
+          files: buku-pdf.apk
